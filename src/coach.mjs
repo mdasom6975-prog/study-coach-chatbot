@@ -54,9 +54,10 @@ export async function chat(userId, message) {
     addTurn(userId, "assistant", reply);
     return reply;
   }
-  const { reply, content } = await callClaude(userId);
-  // Keep the full content blocks, so the next request replays the turn unchanged.
-  addTurn(userId, "assistant", content);
+  const { reply } = await callClaude(userId);
+  // Store only the reply text. Thinking blocks are bound to the system prompt they were made
+  // with, and this prompt changes whenever the user saves a profile, so replaying them gets a 400.
+  addTurn(userId, "assistant", reply);
   return reply;
 }
 
@@ -87,10 +88,10 @@ async function callClaude(userId) {
   }
   const content = data.content || [];
   if (data.stop_reason === "refusal") {
-    return { reply: "그 요청은 도와드릴 수 없습니다.", content: [{ type: "text", text: "그 요청은 도와드릴 수 없습니다." }] };
+    return { reply: "그 요청은 도와드릴 수 없습니다." };
   }
   const reply = content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
-  return { reply: reply || "(빈 응답)", content };
+  return { reply: reply || "(빈 응답)" };
 }
 
 // Rule-based stand-in. It only looks at this user's profile and history.
