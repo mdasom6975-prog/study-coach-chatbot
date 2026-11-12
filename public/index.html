@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학습 코치 챗봇</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --panel: #ffffff; --line: #e2dfd6; --text: #1f1e1b; --muted: #6f6b62;
+    --accent: #2f5d50; --accent-text: #ffffff; --bot: #eef1ec; --warn: #a4442a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #181816; --panel: #22221f; --line: #36352f; --text: #ecebe6; --muted: #a09c91;
+      --accent: #7fb8a4; --accent-text: #10201b; --bot: #2b2e2a; --warn: #e08a6f;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", sans-serif;
+  }
+  .app { max-width: 980px; height: 100%; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: 260px 1fr; gap: 16px; }
+  aside, main { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; min-height: 0; }
+  aside { padding: 16px; overflow: auto; }
+  h1 { font-size: 17px; margin: 0 0 2px; }
+  .mode { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
+  label { display: block; font-size: 12.5px; color: var(--muted); margin: 12px 0 4px; }
+  select, input, textarea, button { font: inherit; color: inherit; }
+  select, input, textarea {
+    width: 100%; padding: 8px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  }
+  textarea { resize: none; }
+  button { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .row { display: flex; gap: 8px; margin-top: 14px; }
+  .row button { flex: 1; }
+  .saved { font-size: 12.5px; color: var(--muted); min-height: 1.5em; margin: 8px 0 0; }
+  main { display: flex; flex-direction: column; }
+  #log { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .empty { margin: auto; color: var(--muted); text-align: center; }
+  .msg { max-width: 78%; padding: 9px 13px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: var(--accent-text); border-bottom-right-radius: 4px; }
+  .msg.bot { align-self: flex-start; background: var(--bot); border-bottom-left-radius: 4px; }
+  .msg.error { align-self: flex-start; color: var(--warn); border: 1px solid var(--warn); }
+  form#send { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); }
+  form#send textarea { flex: 1; }
+  @media (max-width: 720px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: auto; min-height: 100%; }
+    main { min-height: 70vh; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <h1>학습 코치 챗봇</h1>
+    <p class="mode" id="mode">연결 확인 중…</p>
+
+    <label for="user">사용자</label>
+    <select id="user">
+      <option value="u-a">u-a</option>
+      <option value="u-b">u-b</option>
+    </select>
+
+    <label for="tone">말투</label>
+    <select id="tone"><option>반말</option><option>존댓말</option></select>
+
+    <label for="level">수준</label>
+    <select id="level"><option>초급</option><option>중급</option><option>고급</option></select>
+
+    <label for="goals">학습 목표 (쉼표로 구분)</label>
+    <input id="goals" placeholder="예: SQL 기초, 데이터 분석">
+
+    <div class="row">
+      <button id="save" class="primary" type="button">프로필 저장</button>
+      <button id="reset" type="button">초기화</button>
+    </div>
+    <p class="saved" id="saved" role="status"></p>
+  </aside>
+
+  <main>
+    <div id="log" aria-live="polite"></div>
+    <form id="send">
+      <textarea id="input" rows="2" placeholder="메시지를 입력하세요 (Enter 전송, Shift+Enter 줄바꿈)" aria-label="메시지"></textarea>
+      <button class="primary" id="sendBtn" type="submit">보내기</button>
+    </form>
+  </main>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const logs = {}; // userId -> [{ kind, text }], kept in the browser so switching users keeps each chat apart
+  const userId = () => $("user").value;
+
+  async function api(path, body) {
+    const res = await fetch(path, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : undefined);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "요청 실패 (" + res.status + ")");
+    return data;
+  }
+
+  function render() {
+    const log = $("log");
+    log.replaceChildren();
+    const items = logs[userId()] || [];
+    if (!items.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = userId() + "의 대화가 아직 없습니다. 공부 계획이나 과정 추천을 물어보세요.";
+      log.append(empty);
+      return;
+    }
+    for (const item of items) {
+      const el = document.createElement("div");
+      el.className = "msg " + item.kind;
+      el.textContent = item.text;
+      log.append(el);
+    }
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function add(id, kind, text) {
+    (logs[id] ||= []).push({ kind, text });
+    if (id === userId()) render();
+  }
+
+  async function loadProfile() {
+    $("saved").textContent = "";
+    const { profile } = await api("/api/profile?userId=" + encodeURIComponent(userId()));
+    $("tone").value = profile.tone;
+    $("level").value = profile.level;
+    $("goals").value = profile.goals.join(", ");
+  }
+
+  $("user").addEventListener("change", () => { render(); loadProfile(); });
+
+  $("save").addEventListener("click", async () => {
+    try {
+      await api("/api/profile", {
+        userId: userId(), tone: $("tone").value, level: $("level").value,
+        goals: $("goals").value.split(",").map((g) => g.trim()).filter(Boolean),
+      });
+      $("saved").textContent = userId() + " 프로필을 저장했습니다.";
+    } catch (err) { $("saved").textContent = err.message; }
+  });
+
+  $("reset").addEventListener("click", async () => {
+    const id = userId();
+    try {
+      await api("/api/reset", { userId: id });
+      logs[id] = [];
+      render();
+      await loadProfile();
+      $("saved").textContent = id + "의 프로필과 대화를 초기화했습니다.";
+    } catch (err) { $("saved").textContent = err.message; }
+  });
+
+  $("send").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = userId();
+    const message = $("input").value.trim();
+    if (!message) return;
+    $("input").value = "";
+    $("sendBtn").disabled = true;
+    add(id, "user", message);
+    try {
+      const { reply } = await api("/api/chat", { userId: id, message });
+      add(id, "bot", reply);
+    } catch (err) {
+      add(id, "error", err.message);
+    } finally {
+      $("sendBtn").disabled = false;
+      $("input").focus();
+    }
+  });
+
+  $("input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("send").requestSubmit(); }
+  });
+
+  api("/api/health")
+    .then(({ mode }) => { $("mode").textContent = mode === "claude" ? "Claude API로 답변합니다" : "목업 답변 모드 (API 키 없음)"; })
+    .catch(() => { $("mode").textContent = "서버에 연결할 수 없습니다"; });
+  render();
+  loadProfile();
+</script>
+</body>
+</html>
