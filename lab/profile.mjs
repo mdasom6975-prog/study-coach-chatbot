@@ -4,7 +4,7 @@ const DEFAULT_PROFILE = { tone: "반말", level: "초급", goals: [] };
 const profiles = new Map();
 
 export function getProfile(userId) {
-  if (!profiles.has(userId)) profiles.set(userId, DEFAULT_PROFILE);
+  if (!profiles.has(userId)) profiles.set(userId, { ...DEFAULT_PROFILE, goals: [...DEFAULT_PROFILE.goals] });
   return profiles.get(userId);
 }
 
