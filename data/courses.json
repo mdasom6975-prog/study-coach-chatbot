@@ -1,0 +1,89 @@
+{
+  "_note": "예시 데이터입니다. 실제 강의의 커리큘럼이 아니라 실습용으로 만든 가상의 과정입니다.",
+  "courses": [
+    {
+      "name": "파이썬 기초", "level": "초급", "field": "파이썬",
+      "summary": "프로그래밍을 처음 접하는 사람을 위한 첫 과정",
+      "topics": "변수, 조건문, 반복문, 함수",
+      "prerequisites": [], "hoursPerWeek": 4,
+      "weeks": ["변수와 자료형", "조건문", "반복문", "함수와 작은 프로그램 만들기"]
+    },
+    {
+      "name": "SQL 기초", "level": "초급", "field": "데이터베이스",
+      "summary": "표 형태의 데이터를 조회하는 기본기",
+      "topics": "SELECT, WHERE, JOIN, GROUP BY",
+      "prerequisites": [], "hoursPerWeek": 3,
+      "weeks": ["SELECT와 ORDER BY", "WHERE로 조건 걸기", "GROUP BY와 집계 함수", "JOIN으로 테이블 연결"]
+    },
+    {
+      "name": "Git과 협업 기초", "level": "초급", "field": "개발 도구",
+      "summary": "혼자 쓰는 저장소에서 팀 협업까지 가는 Git 입문",
+      "topics": "커밋, 브랜치, 병합, 풀 리퀘스트",
+      "prerequisites": [], "hoursPerWeek": 2,
+      "weeks": ["저장소와 커밋", "브랜치와 병합", "충돌 해결", "풀 리퀘스트와 코드 리뷰"]
+    },
+    {
+      "name": "프롬프트 작성 입문", "level": "초급", "field": "생성형 AI",
+      "summary": "AI에게 원하는 결과를 얻는 질문법",
+      "topics": "역할 지정, 예시 주기, 출력 형식, 검증",
+      "prerequisites": [], "hoursPerWeek": 2,
+      "weeks": ["좋은 질문의 구조", "예시와 출력 형식 지정", "결과 검증하기"]
+    },
+    {
+      "name": "데이터 분석 입문", "level": "중급", "field": "데이터",
+      "summary": "파이썬으로 데이터를 읽고 요약하고 시각화한다",
+      "topics": "pandas, 시각화, 기초 통계",
+      "prerequisites": ["파이썬 기초"], "hoursPerWeek": 5,
+      "weeks": ["pandas로 데이터 읽기", "결측치와 정리", "그룹별 요약", "시각화", "기초 통계와 해석"]
+    },
+    {
+      "name": "SQL 활용", "level": "중급", "field": "데이터베이스",
+      "summary": "실무형 쿼리를 쓰는 SQL 심화",
+      "topics": "서브쿼리, 윈도 함수, 인덱스, 쿼리 최적화",
+      "prerequisites": ["SQL 기초"], "hoursPerWeek": 4,
+      "weeks": ["서브쿼리와 CTE", "윈도 함수", "인덱스 이해", "느린 쿼리 개선"]
+    },
+    {
+      "name": "웹 크롤링 실습", "level": "중급", "field": "파이썬",
+      "summary": "웹 페이지에서 데이터를 모으는 방법",
+      "topics": "HTTP 요청, HTML 파싱, 저장, 매너 있는 수집",
+      "prerequisites": ["파이썬 기초"], "hoursPerWeek": 4,
+      "weeks": ["HTTP 요청과 응답", "HTML 파싱", "여러 페이지 수집", "CSV·DB로 저장"]
+    },
+    {
+      "name": "LLM 앱 개발", "level": "중급", "field": "생성형 AI",
+      "summary": "LLM API로 간단한 서비스를 만든다",
+      "topics": "프롬프트 설계, API 호출, 대화 기록, 평가",
+      "prerequisites": ["파이썬 기초"], "hoursPerWeek": 5,
+      "weeks": ["API 호출과 응답 처리", "시스템 프롬프트 설계", "대화 기록 관리", "간단한 평가 만들기"]
+    },
+    {
+      "name": "RAG 챗봇 구축", "level": "고급", "field": "생성형 AI",
+      "summary": "문서를 근거로 답하는 챗봇",
+      "topics": "문서 분할, 임베딩, 검색, 근거 표시",
+      "prerequisites": ["LLM 앱 개발"], "hoursPerWeek": 6,
+      "weeks": ["문서 분할 전략", "임베딩과 검색", "검색 결과로 답 생성", "근거 표시와 오답 점검", "성능 측정"]
+    },
+    {
+      "name": "에이전트 하네스 설계", "level": "고급", "field": "생성형 AI",
+      "summary": "에이전트가 안전하게 일하도록 틀을 만든다",
+      "topics": "Hook, 검증 루프, 회귀 평가",
+      "prerequisites": ["LLM 앱 개발"], "hoursPerWeek": 6,
+      "weeks": ["규칙 파일과 Skill", "Hook으로 경계 지키기", "검증 루프", "회귀 평가"]
+    },
+    {
+      "name": "LLM 평가와 운영", "level": "고급", "field": "생성형 AI",
+      "summary": "배포한 LLM 서비스의 품질을 지속적으로 지킨다",
+      "topics": "평가 세트, 회귀 테스트, 비용·지연 관리, 모니터링",
+      "prerequisites": ["LLM 앱 개발"], "hoursPerWeek": 5,
+      "weeks": ["평가 세트 설계", "회귀 테스트 자동화", "비용과 지연 줄이기", "운영 모니터링"]
+    },
+    {
+      "name": "데이터 파이프라인 설계", "level": "고급", "field": "데이터",
+      "summary": "데이터를 안정적으로 수집·변환·적재하는 구조",
+      "topics": "배치 처리, 스케줄링, 데이터 품질 검사, 재실행",
+      "prerequisites": ["SQL 활용", "데이터 분석 입문"], "hoursPerWeek": 6,
+      "weeks": ["파이프라인 구조", "변환과 적재", "스케줄링", "품질 검사와 재실행"]
+    }
+  ]
+}
