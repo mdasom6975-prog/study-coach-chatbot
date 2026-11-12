@@ -1,0 +1,20 @@
+{
+  "protect": ["tests/", "evals/", ".env"],
+  "verify": "node --test",
+  "verifyTimeoutSec": 300,
+  "onlyWhenChanged": true,
+  "maxStopRetries": 2,
+  "ralph": {
+    "prompt": "ralph/PROMPT.md",
+    "progress": "ralph/progress.md",
+    "maxIterations": 3,
+    "iterationTimeoutSec": 600,
+    "allowedTools": ["Read", "Edit", "Write", "Grep", "Glob", "Bash(node --test:*)", "Bash(npm test:*)"]
+  },
+  "evals": {
+    "cases": "evals/cases.jsonl",
+    "url": "http://localhost:3000/api/chat",
+    "body": { "message": "{{input}}", "userId": "{{userId}}" },
+    "replyPath": "reply"
+  }
+}
