@@ -26,7 +26,7 @@ Claude 모드를 쓰려면 `.env.example`을 `.env`로 복사하고 키를 채�
 | 환경 변수 | 기본값 | 설명 |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | 없음 | 비어 있으면 목업 모드 |
-| `ANTHROPIC_MODEL` | `claude-opus-5-5` | 사용할 모델 |
+| `ANTHROPIC_MODEL` | `claude-sonnet-5-5` | 사용할 모델 |
 | `PORT` | `3000` | 서버 포트 |
 
 ## API

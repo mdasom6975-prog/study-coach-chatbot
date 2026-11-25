@@ -4,7 +4,9 @@ import fs from "node:fs";
 import { getProfile, getHistory, addTurn } from "./store.mjs";
 
 const API_URL = "https://api.anthropic.com/v1/messages";
-const DEFAULT_MODEL = "claude-opus-5-5";
+const DEFAULT_MODEL = "claude-sonnet-5-5";
+// API로 보내는 최근 메시지 수(10턴). 저장된 기록은 자르지 않고 요청에만 적용한다.
+const MAX_HISTORY_MESSAGES = 20;
 
 // The only courses the coach may recommend. Anything else is ungrounded.
 // Loaded once from data/courses.json (sample data, see its _note field).
@@ -18,15 +20,10 @@ const describeCourse = (c) =>
   "선수 과정: " + (c.prerequisites.join(", ") || "없음") + "\n" +
   "  커리큘럼: " + c.weeks.map((w, i) => (i + 1) + "주차 " + w).join(", ");
 
-export function buildSystemPrompt(userId) {
-  const p = getProfile(userId);
+// 사용자와 무관한 고정부(역할·과정 목록·규칙). 이 부분만 캐시해 모든 사용자가 공유한다.
+function buildStaticPrompt() {
   return [
     "너는 개인 맞춤형 학습 코치다. 한국어로 답한다.",
-    "",
-    "## 이 사용자의 프로필",
-    "- 말투: " + p.tone,
-    "- 수준: " + p.level,
-    "- 목표: " + (p.goals.join(", ") || "없음"),
     "",
     "## 추천할 수 있는 과정 (이 목록 밖의 과정은 지어내지 않는다)",
     ...COURSES.map(describeCourse),
@@ -41,6 +38,21 @@ export function buildSystemPrompt(userId) {
     "- 답변은 짧게, 바로 실행할 수 있는 형태로 쓴다.",
     "- 채팅 화면은 글자를 그대로 보여 준다. 굵게(**), 제목(#), 백틱 같은 마크다운 기호 없이 일반 문장으로 쓴다. 나열이 필요하면 줄을 바꿔 '1.' 이나 '-' 로 시작한다.",
   ].join("\n");
+}
+
+// 사용자별로 바뀌는 프로필. 캐시 대상에서 빼서 프로필을 저장해도 고정부 캐시가 깨지지 않게 한다.
+function buildProfilePrompt(userId) {
+  const p = getProfile(userId);
+  return [
+    "## 이 사용자의 프로필",
+    "- 말투: " + p.tone,
+    "- 수준: " + p.level,
+    "- 목표: " + (p.goals.join(", ") || "없음"),
+  ].join("\n");
+}
+
+export function buildSystemPrompt(userId) {
+  return buildStaticPrompt() + "\n\n" + buildProfilePrompt(userId);
 }
 
 export function mode() {
@@ -61,6 +73,13 @@ export async function chat(userId, message) {
   return reply;
 }
 
+// 저장 배열의 사본에서 최근 N개만 고른다. 첫 메시지가 assistant면 API가 거부하므로 user가 나올 때까지 뺀다.
+function recentMessages(userId) {
+  const recent = getHistory(userId).slice(-MAX_HISTORY_MESSAGES);
+  while (recent.length > 0 && recent[0].role !== "user") recent.shift();
+  return recent;
+}
+
 async function callClaude(userId) {
   const res = await fetch(API_URL, {
     method: "POST",
@@ -77,8 +96,12 @@ async function callClaude(userId) {
       output_config: { effort: "low" },
       // If a safety classifier declines, the API retries on a fallback model in the same call.
       fallbacks: "default",
-      system: buildSystemPrompt(userId),
-      messages: getHistory(userId),
+      // 고정부에만 cache_control을 달아 재사용하고, 프로필 블록은 뒤에 붙여 매번 새로 보낸다.
+      system: [
+        { type: "text", text: buildStaticPrompt(), cache_control: { type: "ephemeral" } },
+        { type: "text", text: buildProfilePrompt(userId) },
+      ],
+      messages: recentMessages(userId),
     }),
   });
   const data = await res.json().catch(() => ({}));
@@ -86,6 +109,10 @@ async function callClaude(userId) {
     getHistory(userId).pop(); // drop the user turn, so a retry does not send it twice
     throw new Error("Claude API " + res.status + ": " + (data.error?.message || "알 수 없는 오류"));
   }
+  // 캐시 적중 여부를 확인할 수 있게 토큰 사용량만 한 줄 남긴다(키·내용은 남기지 않는다).
+  const u = data.usage || {};
+  console.log("[usage] cache_read=" + (u.cache_read_input_tokens ?? 0) +
+    " cache_write=" + (u.cache_creation_input_tokens ?? 0) + " input=" + (u.input_tokens ?? 0));
   const content = data.content || [];
   if (data.stop_reason === "refusal") {
     return { reply: "그 요청은 도와드릴 수 없습니다." };
